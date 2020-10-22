@@ -1,18 +1,38 @@
 #![feature(decl_macro)]
+#![feature(try_trait)]
 
 #[macro_use]
 extern crate rocket;
 
 use rocket::State;
+use rocket::{http::Status, response::Responder};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use sled_extensions::bincode::Tree;
 use sled_extensions::DbExt;
+use std::option::NoneError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ServerError {
     #[error("sled db error")]
     SledError(#[from] sled_extensions::Error),
+    #[error("resource not found")]
+    NotFound,
+}
+
+impl From<NoneError> for ServerError {
+    fn from(_: NoneError) -> Self {
+        ServerError::NotFound
+    }
+}
+
+impl<'a> Responder<'a> for ServerError {
+    fn respond_to(self, _: &rocket::Request) -> Result<rocket::Response<'a>, Status> {
+        match self {
+            Self::SledError(_) => Err(Status::InternalServerError),
+            Self::NotFound => Err(Status::NotFound),
+        }
+    }
 }
 
 struct Database {
@@ -34,7 +54,8 @@ fn get_user(db: State<Database>, username: String) -> EndpointResult<Json<User>>
 
 #[delete("/users/<username>")]
 fn delete_user(db: State<Database>, username: String) -> EndpointResult<Json<User>> {
-    todo!()
+    let user = db.users.remove(username.as_bytes())??;
+    Ok(Json(user))
 }
 
 #[put("/users", data = "<user>")]
