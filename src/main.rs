@@ -49,7 +49,7 @@ type EndpointResult<T> = Result<T, ServerError>;
 
 #[get("/users/<username>")]
 fn get_user(db: State<Database>, username: String) -> EndpointResult<Json<User>> {
-    todo!()
+    Ok(Json(db.users.get(username.as_bytes())??))
 }
 
 #[delete("/users/<username>")]
