@@ -8,7 +8,12 @@ use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use sled_extensions::bincode::Tree;
 use sled_extensions::DbExt;
-use std::error::Error;
+
+#[derive(thiserror::Error, Debug)]
+pub enum ServerError {
+    #[error("sled db error")]
+    SledError(#[from] sled_extensions::Error),
+}
 
 struct Database {
     users: Tree<User>,
@@ -20,7 +25,7 @@ struct User {
     favorite_food: String,
 }
 
-type EndpointResult<T> = Result<T, &'static str>;
+type EndpointResult<T> = Result<T, ServerError>;
 
 #[get("/users/<username>")]
 fn get_user(db: State<Database>, username: String) -> EndpointResult<Json<User>> {
