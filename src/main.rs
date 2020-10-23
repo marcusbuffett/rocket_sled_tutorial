@@ -34,7 +34,10 @@ fn delete_user(db: State<Database>, username: String) -> EndpointResult<Json<Use
 
 #[put("/users", data = "<user>")]
 fn put_user(db: State<Database>, user: Json<User>) -> EndpointResult<Json<User>> {
-    todo!()
+    db.users
+        .insert(user.username.as_bytes(), user.clone())
+        .unwrap();
+    Ok(Json(user.0))
 }
 
 fn main() {
